@@ -1,0 +1,172 @@
+# Формат игры - 1 игрок против компьютера, первый ход - игрок.
+# размер игрового поля 3х3 клетки
+
+MyMove = True           #если True, то ход игрока с клавиатуры; иначе расчет следующего хода
+MoveCount = 0           #Счетчик числа ходов - на 9 ходах поле заполнено
+FieldFilled = False     #если True, то игровое поле заполнено; иначе можем продолжать
+HasWinner = False       #если True, то состоялся выигрыш; иначе можем продолжать
+GameField = [['-'] * 3 for i in range(3)]   #матрица игрового поля: "-" пусто, "О" ход противника,
+                                            #"Х" мой ход
+CellCost = [3, 2, 3, 2, 4, 2, 3, 2, 3]  # матрица цены хода в ячейку
+TempCellCost = CellCost.copy()          # копия матрицы цены хода
+LineRisc = [0,0,0,0,0,0,0,0]            # статус каждой из возможных линий выигрыша
+IncorrectInput = False
+HRange = list("123")                    #диапазон для второго символа хода
+VRange = list("abc")                    #диапазон для первого символа хода
+Move = ""
+PosV = 0
+PosH = 0
+result = ""
+MoveCount = 0                           #счетчик ходов, 9 ходов - поле заполнено
+TempGameField = []  # копия игрового поля
+WinLine = []  # линии, по которым возможен выигрыш; WinLine[горизонталь][вертикаль]
+WinLine.insert(0, [GameField[0][0], GameField[1][1], GameField[2][2]]) # диагональ 1 (a1, b2, c3)
+WinLine.insert(1, [GameField[2][0], GameField[1][1], GameField[0][2]]) # диагональ 2 (a3, b2, c1)
+WinLine.insert(2, [GameField[0][0], GameField[0][1], GameField[0][2]]) # горизонталь 1 (a1, a2, a3)
+WinLine.insert(3, [GameField[1][0], GameField[1][1], GameField[1][2]]) # горизонталь 2 (b1, b2, b3)
+WinLine.insert(4, [GameField[2][0], GameField[2][1], GameField[2][2]]) # горизонталь 3 (c1, c2, c3)
+WinLine.insert(5, [GameField[0][0], GameField[1][0], GameField[2][0]]) # вертикаль 1 (a1, b1, c1)
+WinLine.insert(6, [GameField[0][1], GameField[1][1], GameField[2][1]]) # вертикаль 2 (a2, b2, c2)
+WinLine.insert(7, [GameField[0][2], GameField[1][2], GameField[2][2]]) # вертикаль 3 (a3, b3, c3)
+
+CellPosition = ['a1', 'a2', 'a3', 'b1', 'b2', 'b3', 'c1', 'c2', 'c3']
+CellName = []
+CellName.insert(0,['a1','b2','c3'])
+CellName.insert(1,['c1','b2','a3'])
+CellName.insert(2,['a1','a2','a3'])
+CellName.insert(3,['b1','b2','b3'])
+CellName.insert(4,['c1','c2','c3'])
+CellName.insert(5,['a1','b1','c1'])
+CellName.insert(6,['a2','b2','c2'])
+CellName.insert(7,['a3','b3','c3'])
+
+TempGameField = GameField.copy()
+
+def MoveCalc():     # вычисление перед поиском хода
+    i = 0
+    j = 0
+    for i in range(8):
+        XLine = 0
+        OLine = 0
+        for j in range(3):
+            if WinLine[i][j] == "X":
+                XLine += 1
+            elif WinLine[i][j] == "0":
+                OLine += 1
+        if XLine > 0 and OLine > 0:
+            LineRisc[i] = 0
+        elif XLine == 0 and OLine == 0:
+            LineRisc[i] = 0
+        elif XLine > 0 and OLine == 0:
+            LineRisc[i] = -XLine
+        elif XLine == 0 and OLine > 0:
+            LineRisc[i] = OLine
+        XLine = 0
+        OLine = 0
+    i += 1
+    j = 0
+    return LineRisc
+
+def Hint():
+    if max(LineRisc) > 1: #
+        Reply = MyLastMove()
+    elif min(LineRisc) < -1:
+        Reply = BlockMove()
+    else:
+        Reply = FindMove()
+    return Reply
+
+def MyLastMove(): # выигрыш одним ходом
+    for i in range(8):
+        if LineRisc[i] > 1:
+            LineNum = i
+    for i in range(3):
+        if WinLine[LineNum][i] == '-':
+            PosNum = i
+    return CellName[LineNum][PosNum]
+
+def BlockMove():        # блокируем возможный выигрыш противника
+    for i in range(8):
+        if LineRisc[i] < -1:
+            LineNum = i
+    for i in range(3):
+        if WinLine[LineNum][i] == '-':
+            PosNum = i
+    return CellName[LineNum][PosNum]
+
+def FindMove():     # если нет выигрыша или риска проигрыша, по подбираем нейтральный ход
+    MaxCost = max(CellCost)
+    for i in range(9):
+        if CellCost[i] == MaxCost:
+            CellNum = CellPosition[i]
+#            print(CellNum//3, CellNum%3)
+
+    return CellNum
+
+def InitWinLine():      #копировать данные игрового поля во все линии, по которым возможен выигрыш
+    WinLine.insert(0, [GameField[0][0], GameField[1][1], GameField[2][2]])  # диагональ 1 (a1, b2, c3)
+    WinLine.insert(1, [GameField[2][0], GameField[1][1], GameField[0][2]])  # диагональ 2 (a3, b2, c1)
+    WinLine.insert(2, [GameField[0][0], GameField[0][1], GameField[0][2]])  # горизонталь 1 (a1, a2, a3)
+    WinLine.insert(3, [GameField[1][0], GameField[1][1], GameField[1][2]])  # горизонталь 2 (b1, b2, b3)
+    WinLine.insert(4, [GameField[2][0], GameField[2][1], GameField[2][2]])  # горизонталь 3 (c1, c2, c3)
+    WinLine.insert(5, [GameField[0][0], GameField[1][0], GameField[2][0]])  # вертикаль 1 (a1, b1, c1)
+    WinLine.insert(6, [GameField[0][1], GameField[1][1], GameField[2][1]])  # вертикаль 2 (a2, b2, c2)
+    WinLine.insert(7, [GameField[0][2], GameField[1][2], GameField[2][2]])  # вертикаль 3 (a3, b3, c3)
+
+def MovePosition(str):  #определить координаты хода
+    PosH = HRange.index(str[1])
+    PosV = VRange.index(str[0])
+    return PosV, PosH
+
+while not (FieldFilled or HasWinner):
+    print(10 * '\n')            #очистка экрана
+    if Move != "":
+        print(CellCost, "цены хода в ячейки, 0 - ячейка занята")
+        print(LineRisc, "(-3) - выигрыш X, (+3) - выигрыш 0")
+    if IncorrectInput:
+        print("Неверный ввод!")
+        MyMove = not MyMove
+    print("История:" + Move)    #вывод истории ходов
+    print(" \  1  2  3 ")       #вывод игрового поля
+    print(" a ", "  ".join(GameField[0]))
+    print(" b ", "  ".join(GameField[1]))
+    print(" c ", "  ".join(GameField[2]))
+    IncorrectInput = False
+    if MyMove:
+        str = list(input("Введите свой ход (X):"))
+    else:
+        # MakeMove()
+        str = list(Hint())
+    if (str[0] in VRange) and (str[1] in HRange) and (len(str) <= 2):
+        if not IncorrectInput:
+            PosV, PosH = MovePosition(str)
+            if GameField[PosV][PosH] == "-":
+                if MyMove:
+                    Move += " X:" + str[0] + str[1]
+                    GameField[PosV][PosH] = "X"
+                    CellCost[3*PosV+PosH] = 0
+                    InitWinLine()
+                    result = MoveCalc()
+                else:
+                    Move += " 0:" + str[0] + str[1]
+                    GameField[PosV][PosH] = "0"
+                    CellCost[3*PosV+PosH] = 0
+                    InitWinLine()
+                    result = MoveCalc()
+                MoveCount += 1
+            else:
+                IncorrectInput = True
+    else:
+        IncorrectInput = True
+    if (MoveCount < 9) and (min(LineRisc) > -3) and (max(LineRisc) < 3):
+        MyMove = not MyMove
+    else:
+        if MoveCount >= 9:
+            FieldFilled = True
+            print("Поле заполнено - ничья")
+        if min(LineRisc) <= -3:
+            HasWinner = True
+            print("X победил!")
+        if max(LineRisc) >= 3:
+            HasWinner = True
+            print("0 победил!")
